@@ -76,7 +76,7 @@ func tokenize(line string) * token {
 	prev := & HEAD
 	index := 0
 	for index < len(line) {
-		var tok token
+		var tok * token
 		switch {
 		case unicode.IsDigit(rune(line[index])):
 			tok, index = readNumber(line, index)
@@ -92,14 +92,19 @@ func tokenize(line string) * token {
 			//panicとはプログラムの継続的な実行が難しく、どうしよもなくなった時にプログラムを強制的に終了させるために発生するエラーです。
 			log.Panicf("invalid character: '%c' at index=%v in %v", line[index], index, line)
 		}
-		prev.next = & tok
-		tok.prev = prev
-		prev = & tok
+		prev = connectToken(prev, tok)
 	}
 	return & HEAD
 }
 
+func connectToken(prev * token , tok * token)(* token){
+	prev.next = tok
+	tok.prev = prev
+	return tok
+}
+
 func printToken(p * token){
+	fmt.Printf("\n")
 	for{
 		fmt.Printf("%d %f\n", p.kind, p.number)
 		p = p.next
@@ -175,23 +180,23 @@ func evaluate(p * token) float64 {
 	return answer
 }
 
-func readPlus(line string, index int) (token, int) {
-	return token{Plus, 0, nil, nil}, index + 1
+func readPlus(line string, index int) (* token, int) {
+	return & token{Plus, 0, nil, nil}, index + 1
 }
 
-func readMinus(line string, index int) (token, int) {
-	return token{Minus, 0, nil, nil}, index + 1
+func readMinus(line string, index int) (* token, int) {
+	return & token{Minus, 0, nil, nil}, index + 1
 }
 
-func readMultiple(line string, index int) (token, int) {
-	return token{Multiple, 0, nil, nil}, index + 1
+func readMultiple(line string, index int) (* token, int) {
+	return & token{Multiple, 0, nil, nil}, index + 1
 }
 
-func readDivide(line string, index int) (token, int) {
-	return token{Divide, 0, nil, nil}, index + 1
+func readDivide(line string, index int) (* token, int) {
+	return & token{Divide, 0, nil, nil}, index + 1
 }
 
-func readNumber(line string, index int) (token, int) {
+func readNumber(line string, index int) (* token, int) {
 	number := float64(0)
 	flag := false
 	keta := float64(1)
@@ -213,5 +218,5 @@ DigitLoop:
 		index += 1
 	}
 	//数値の時はたくさんindexを進める
-	return token{Number, number * keta, nil, nil}, index
+	return & token{Number, number * keta, nil, nil}, index
 }
