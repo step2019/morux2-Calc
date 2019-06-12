@@ -31,9 +31,13 @@ func main() {
 
 // Calculate turns a string like "1 + 3" into its corresponding
 // numerical value (in this case 4).
+//メソッド名 引数 戻り値の型
 func Calculate(line string) float64 {
-	tokens := tokenize(line)
-	return evaluate(tokens)
+	HEAD := tokenize(line)
+	printToken(HEAD)
+	readTokens(HEAD)
+	printToken(HEAD)
+	return evaluate(HEAD)
 }
 
 type token struct {
@@ -44,6 +48,8 @@ type token struct {
 	// If kind is Number, then number is its corresponding numeric
 	// value.
 	number float64
+	prev   *token
+	next   *token
 }
 
 // TokenKind describes a valid kinds of tokens. This acts kind of
@@ -53,19 +59,24 @@ type tokenKind int
 // These are the valid kinds of tokens. Each gets automatically
 // initialized with a unique value by setting the first one to iota
 // like this. https://golang.org/ref/spec#Iota
+//0123..と番号が振られていく(https://qiita.com/curepine/items/2ae2f6504f0d28016411)
 const (
 	Number tokenKind = iota
 	Plus
 	Minus
+	Multiple
+	Divide
 )
 
 // Tokenize lexes a given line, breaking it down into its component
 // tokens.
-func tokenize(line string) []token {
-	tokens := []token{token{Plus, 0}} // Start with a dummy '+' token
+func tokenize(line string) *token {
+	// Start with a dummy '+' token
+	HEAD := token{Plus, 0, nil, nil}
+	prev := &HEAD
 	index := 0
 	for index < len(line) {
-		var tok token
+		var tok *token
 		switch {
 		case unicode.IsDigit(rune(line[index])):
 			tok, index = readNumber(line, index)
@@ -73,45 +84,119 @@ func tokenize(line string) []token {
 			tok, index = readPlus(line, index)
 		case line[index] == '-':
 			tok, index = readMinus(line, index)
+		case line[index] == '*':
+			tok, index = readMultiple(line, index)
+		case line[index] == '/':
+			tok, index = readDivide(line, index)
 		default:
+			//panicとはプログラムの継続的な実行が難しく、どうしよもなくなった時にプログラムを強制的に終了させるために発生するエラーです。
 			log.Panicf("invalid character: '%c' at index=%v in %v", line[index], index, line)
 		}
-		tokens = append(tokens, tok)
+		prev = connectToken(prev, tok)
 	}
-	return tokens
+	return &HEAD
+}
+
+func connectToken(prev *token, tok *token) *token {
+	prev.next = tok
+	tok.prev = prev
+	return tok
+}
+
+func printToken(p *token) {
+	fmt.Printf("\n")
+	for {
+		fmt.Printf("%d %f\n", p.kind, p.number)
+		p = p.next
+		if p == nil {
+			break
+		}
+	}
+	fmt.Printf("\n")
+}
+
+func readTokens(HEAD *token) *token {
+	p := HEAD
+	for {
+		switch p.kind {
+		case Multiple:
+			new := calcMultiple(p)
+			p = insertToken(p.prev.prev, new, p.next.next)
+		case Divide:
+			new := calcDivide(p)
+			p = insertToken(p.prev.prev, new, p.next.next)
+		default:
+			p = p.next
+		}
+
+		if p == nil {
+			break
+		}
+	}
+	return HEAD
+}
+
+func calcMultiple(p *token) *token {
+	return &token{Number, p.prev.number * p.next.number, nil, nil}
+}
+
+func calcDivide(p *token) *token {
+	return &token{Number, p.prev.number / p.next.number, nil, nil}
+}
+
+func insertToken(prev *token, new *token, next *token) *token {
+	if prev != nil {
+		prev.next = new
+		new.prev = prev
+	}
+	if next != nil {
+		next.prev = new
+		new.next = next
+	}
+	return new.next
 }
 
 // Evaluate computes the numeric value expressed by a series of
 // tokens.
-func evaluate(tokens []token) float64 {
+func evaluate(p *token) float64 {
 	answer := float64(0)
-	index := 0
-	for index < len(tokens) {
-		switch tokens[index].kind {
+	for {
+		switch p.kind {
 		case Number:
-			switch tokens[index-1].kind {
+			switch p.prev.kind {
 			case Plus:
-				answer += tokens[index].number
+				answer += p.number
 			case Minus:
-				answer -= tokens[index].number
+				answer -= p.number
 			default:
-				log.Panicf("invalid syntax for tokens: %v", tokens)
+				log.Panicf("invalid syntax for token")
 			}
 		}
-		index += 1
+		p = p.next
+		if p == nil {
+			break
+		}
 	}
 	return answer
 }
 
-func readPlus(line string, index int) (token, int) {
-	return token{Plus, 0}, index + 1
+func readPlus(line string, index int) (*token, int) {
+	return &token{Plus, 0, nil, nil}, index + 1
 }
 
-func readMinus(line string, index int) (token, int) {
-	return token{Minus, 0}, index + 1
+func readMinus(line string, index int) (*token, int) {
+	return &token{Minus, 0, nil, nil}, index + 1
 }
 
-func readNumber(line string, index int) (token, int) {
+func readMultiple(line string, index int) (*token, int) {
+	return &token{Multiple, 0, nil, nil}, index + 1
+}
+
+func readDivide(line string, index int) (*token, int) {
+	return &token{Divide, 0, nil, nil}, index + 1
+}
+
+func readNumber(line string, index int) (*token, int) {
 	number := float64(0)
 	flag := false
 	keta := float64(1)
@@ -121,6 +206,7 @@ DigitLoop:
 		case line[index] == '.':
 			flag = true
 		case unicode.IsDigit(rune(line[index])):
+			//'0'をひいて文字を数値に変換
 			number = number*10 + float64(line[index]-'0')
 			if flag {
 				keta *= 0.1
@@ -131,5 +217,6 @@ DigitLoop:
 		}
 		index += 1
 	}
-	return token{Number, number * keta}, index
+	//数値の時はたくさんindexを進める
+	return &token{Number, number * keta, nil, nil}, index
 }
