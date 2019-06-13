@@ -21,6 +21,9 @@ func TestCalculate(t *testing.T) {
 		{"2-1", 1},
 		{"1.0+2.1-3", 0.1},
 		// Add more test cases here!
+		{"0", 0},
+		{"1*2",2},
+		{"4/2", 2},
 	} {
 		defer func() {
 			if r := recover(); r != nil {
@@ -29,6 +32,7 @@ func TestCalculate(t *testing.T) {
 			}
 		}()
 		got := Calculate(test.in)
+		// floatだと完全には一致しないのでとっても近いかどうかを判定している。
 		if math.Abs(got-test.want) > tolerance {
 			t.Errorf("Calculate(%v) = %v but want %v", test.in, got, test.want)
 		}
