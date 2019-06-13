@@ -129,11 +129,9 @@ func readTokens(HEAD *token) *token {
 	for {
 		switch p.kind {
 		case Multiple:
-			new := calcMultiple(p)
-			p = insertToken(p.prev.prev, new, p.next.next)
+			p = replaceToken(p, calcMultiple(p))
 		case Divide:
-			new := calcDivide(p)
-			p = insertToken(p.prev.prev, new, p.next.next)
+			p = replaceToken(p, calcDivide(p))
 		default:
 			p = p.next
 		}
@@ -153,14 +151,14 @@ func calcDivide(p *token) *token {
 	return &token{Number, p.prev.number / p.next.number, nil, nil}
 }
 
-func insertToken(prev *token, new *token, next *token) *token {
-	if prev != nil {
-		prev.next = new
-		new.prev = prev
+func replaceToken(p *token, new *token) *token {
+	if p.prev.prev != nil {
+		p.prev.prev.next = new
+		new.prev = p.prev.prev
 	}
-	if next != nil {
-		next.prev = new
-		new.next = next
+	if p.next.next != nil {
+		p.next.next.prev = new
+		new.next = p.next.next
 	}
 	return new.next
 }
