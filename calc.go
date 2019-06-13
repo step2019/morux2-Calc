@@ -33,10 +33,19 @@ func main() {
 // numerical value (in this case 4).
 //メソッド名 引数 戻り値の型
 func Calculate(line string) float64 {
+	//数式文字列をトークンに分解する
 	HEAD := tokenize(line)
+
+	//トークンを表示する
 	//printToken(HEAD)
+
+	// * / を計算してトークンを組み替える
 	readTokens(HEAD)
+
+	//トークンを表示する
 	//printToken(HEAD)
+
+	//計算結果を返す
 	return evaluate(HEAD)
 }
 
