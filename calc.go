@@ -34,19 +34,25 @@ func main() {
 //メソッド名 引数 戻り値の型
 func Calculate(line string) float64 {
 	//数式文字列をトークンに分解する
-	HEAD := tokenize(line)
+	HEAD, TAIL := tokenize(line)
+
+	//トークンを表示する
+	//printToken(HEAD)
+
+	// () を計算してトークンを組み替える
+	evaluateStartEnd(TAIL)
 
 	//トークンを表示する
 	//printToken(HEAD)
 
 	// * / を計算してトークンを組み替える
-	readTokens(HEAD)
+	evaluateMulDiv(HEAD)
 
 	//トークンを表示する
 	//printToken(HEAD)
 
 	//計算結果を返す
-	return evaluate(HEAD)
+	return evaluatePlusMinus(HEAD)
 }
 
 type token struct {
@@ -75,11 +81,14 @@ const (
 	Minus
 	Multiple
 	Divide
+	Start
+	End
 )
 
 // Tokenize lexes a given line, breaking it down into its component
 // tokens.
-func tokenize(line string) *token {
+//HEAD と TAIL を返す
+func tokenize(line string) (*token, *token) {
 	// Start with a dummy '+' token
 	HEAD := token{Plus, 0, nil, nil}
 	prev := &HEAD
@@ -97,13 +106,18 @@ func tokenize(line string) *token {
 			tok, index = readMultiple(line, index)
 		case line[index] == '/':
 			tok, index = readDivide(line, index)
+		case line[index] == '(':
+			tok, index = readStart(line, index)
+		case line[index] == ')':
+			tok, index = readEnd(line, index)
 		default:
 			//panicとはプログラムの継続的な実行が難しく、どうしよもなくなった時にプログラムを強制的に終了させるために発生するエラーです。
 			log.Panicf("invalid character: '%c' at index=%v in %v", line[index], index, line)
 		}
 		prev = connectToken(prev, tok)
 	}
-	return &HEAD
+	// means return HEAD and TAIL
+	return &HEAD, prev
 }
 
 func connectToken(prev *token, tok *token) *token {
@@ -124,14 +138,62 @@ func printToken(p *token) {
 	fmt.Printf("\n")
 }
 
-func readTokens(HEAD *token) *token {
+func evaluateStartEnd(TAIL *token) {
+	p := TAIL
+	for {
+		switch p.kind {
+		case Start:
+			//(の次の数字
+			tmpHead := p.next
+			//()のペアを見つける
+			for p.next.kind != End {
+				p = p.next
+			}
+			//)の前の数字
+			tmpEnd := p
+			p = calcStartEnd(tmpHead, tmpEnd)
+		default:
+			p = p.prev
+		}
+
+		if p == nil {
+			break
+		}
+	}
+}
+
+func calcStartEnd(tmpHead *token, tmpEnd *token) *token {
+	new := &token{Number, 0, nil, nil}
+	replaceStartEnd(tmpHead, new, tmpEnd)
+	//()の中の式を前後から切り離す
+	// Start with a dummy '+' token
+	dummy := &token{Plus, 0, nil, tmpHead}
+	tmpHead.prev = dummy
+	tmpEnd.next = nil
+	evaluateMulDiv(dummy)
+	new.number = evaluatePlusMinus(dummy)
+	return new.prev
+}
+
+func replaceStartEnd(tmpHead *token, new *token, tmpEnd *token) {
+	//tmpHead.prev.prevは必ずnilにならない(dummyが入ってるから)
+	tmpHead.prev.prev.next = new
+	new.prev = tmpHead.prev.prev
+
+	if tmpEnd.next.next != nil {
+		tmpEnd.next.next.prev = new
+		new.next = tmpEnd.next.next
+	}
+}
+
+func evaluateMulDiv(HEAD *token) {
 	p := HEAD
 	for {
 		switch p.kind {
 		case Multiple:
-			p = replaceToken(p, calcMultiple(p))
+			p = replaceMulDiv(p, calcMultiple(p))
 		case Divide:
-			p = replaceToken(p, calcDivide(p))
+			p = replaceMulDiv(p, calcDivide(p))
 		default:
 			p = p.next
 		}
@@ -140,7 +202,6 @@ func readTokens(HEAD *token) *token {
 			break
 		}
 	}
-	return HEAD
 }
 
 func calcMultiple(p *token) *token {
@@ -151,7 +212,7 @@ func calcDivide(p *token) *token {
 	return &token{Number, p.prev.number / p.next.number, nil, nil}
 }
 
-func replaceToken(p *token, new *token) *token {
+func replaceMulDiv(p *token, new *token) *token {
 	if p.prev.prev != nil {
 		p.prev.prev.next = new
 		new.prev = p.prev.prev
@@ -163,9 +224,9 @@ func replaceToken(p *token, new *token) *token {
 	return new.next
 }
 
-// Evaluate computes the numeric value expressed by a series of
+// EvaluatePlusMinus computes the numeric value expressed by a series of
 // tokens.
-func evaluate(p *token) float64 {
+func evaluatePlusMinus(p *token) float64 {
 	answer := float64(0)
 	for {
 		switch p.kind {
@@ -201,6 +262,14 @@ func readMultiple(line string, index int) (*token, int) {
 
 func readDivide(line string, index int) (*token, int) {
 	return &token{Divide, 0, nil, nil}, index + 1
+}
+
+func readStart(line string, index int) (*token, int) {
+	return &token{Start, 0, nil, nil}, index + 1
+}
+
+func readEnd(line string, index int) (*token, int) {
+	return &token{End, 0, nil, nil}, index + 1
 }
 
 func readNumber(line string, index int) (*token, int) {
