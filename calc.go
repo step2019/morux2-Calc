@@ -220,6 +220,9 @@ func calcMultiple(p *token) *token {
 }
 
 func calcDivide(p *token) *token {
+	if p.next.number == 0 {
+		log.Panicf("can't divide by 0")
+	}
 	return &token{Number, p.prev.number / p.next.number, nil, nil}
 }
 
