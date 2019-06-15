@@ -176,9 +176,9 @@ func evaluateStartEnd(TAIL *token) {
 func calcStartEnd(tmpHead *token, tmpEnd *token) *token {
 	new := &token{Number, 0, nil, nil}
 	replaceStartEnd(tmpHead, new, tmpEnd)
-	//()の中の式を前後から切り離す
 	// Start with a dummy '+' token
 	dummy := &token{Plus, 0, nil, tmpHead}
+	//()の中の式を前後から切り離す
 	tmpHead.prev = dummy
 	tmpEnd.next = nil
 	evaluateMulDiv(dummy)
