@@ -93,15 +93,26 @@ func tokenize(line string) (*token, *token) {
 	HEAD := token{Plus, 0, nil, nil}
 	prev := &HEAD
 	index := 0
+	flag := false
 	for index < len(line) {
 		var tok *token
 		switch {
 		case unicode.IsDigit(rune(line[index])):
 			tok, index = readNumber(line, index)
+			if flag {
+				tok.number *= -1
+				flag = false
+			}
 		case line[index] == '+':
 			tok, index = readPlus(line, index)
 		case line[index] == '-':
-			tok, index = readMinus(line, index)
+			if prev.kind != Number {
+				flag = true
+				index++
+				continue
+			} else {
+				tok, index = readMinus(line, index)
+			}
 		case line[index] == '*':
 			tok, index = readMultiple(line, index)
 		case line[index] == '/':

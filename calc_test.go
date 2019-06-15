@@ -112,7 +112,6 @@ func TestCalculate(t *testing.T) {
 
 		//(式)*(式)
 		{"(1+2)*(3+4)", 21},
-
 	} {
 		defer func() {
 			if r := recover(); r != nil {
