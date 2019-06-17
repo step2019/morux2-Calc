@@ -139,10 +139,9 @@ func TestCalculatePanics(t *testing.T) {
 	} {
 		// When panic is called the whole calling function is
 		// terminated. So unless we're calling Calculate from within
-		// another function (in this case an anonymous function
-		// defined here), we would stop the for loop at the first
-		// panic (so we wouldn't actually catch a test case if it were
-		// wrong).
+		// another function (missing in this case!), we would (and
+		// do!) stop the for loop at the first panic (so we won't
+		// actually catch a test case if it were wrong).
 
 		// NOTE: This example is wrong. In this case we've removed the
 		// surrounding function, so when the first test case panics,
