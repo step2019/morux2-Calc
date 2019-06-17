@@ -135,7 +135,7 @@ func TestCalculatePanics(t *testing.T) {
 	}{
 		//0で割った時に正しいエラー文が出るかどうかのチェックを追加したい
 		{"0/0", "can't divide by 0"},
-		{"1/0", "can't divide by 0"},
+		{"1/0", "this doesn't break but it should."},
 	} {
 		// When panic is called the whole calling function is
 		// terminated. So unless we're calling Calculate from within
@@ -143,18 +143,20 @@ func TestCalculatePanics(t *testing.T) {
 		// defined here), we would stop the for loop at the first
 		// panic (so we wouldn't actually catch a test case if it were
 		// wrong).
-		func() {
-			defer func() {
-				panicked := fmt.Sprint(recover())
-				if panicked != test.want {
-					t.Errorf("Calculate(%v) had panicked = `%v` but wanted panic: %v", test.in, panicked, test.want)
-				}
-			}()
-			log.Printf("run %v", test.in)
-			Calculate(test.in)
-			// The defered function above executes anyway and will
-			// report an error unless panicked matches the expected
-			// value.
+
+		// NOTE: This example is wrong. In this case we've removed the
+		// surrounding function, so when the first test case panics,
+		// the whole test case terminates without reporting a failure.
+		defer func() {
+			panicked := fmt.Sprint(recover())
+			if panicked != test.want {
+				t.Errorf("Calculate(%v) had panicked = `%v` but wanted panic: %v", test.in, panicked, test.want)
+			}
 		}()
+		log.Printf("run %v", test.in)
+		Calculate(test.in)
+		// The defered function above executes anyway and will
+		// report an error unless panicked matches the expected
+		// value.
 	}
 }
