@@ -2,7 +2,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"math"
 	"runtime/debug"
@@ -136,6 +135,8 @@ func TestCalculatePanics(t *testing.T) {
 		//0で割った時に正しいエラー文が出るかどうかのチェックを追加したい
 		{"0/0", "can't divide by 0"},
 		{"1/0", "can't divide by 0"},
+
+		{"1+1", "this test intentionally fails to demonstrate the nil case"},
 	} {
 		// When panic is called the whole calling function is
 		// terminated. So unless we're calling Calculate from within
@@ -144,10 +145,18 @@ func TestCalculatePanics(t *testing.T) {
 		// panic (so we wouldn't actually catch a test case if it were
 		// wrong).
 		func() {
+			var got float64
 			defer func() {
-				panicked := fmt.Sprint(recover())
-				if panicked != test.want {
-					t.Errorf("Calculate(%v) had panicked = `%v` but wanted panic: %v", test.in, panicked, test.want)
+				i := recover() // recover returns an interface{}
+				switch panicked := i.(type) {
+				case string: // here `panicked` is now typed as a string
+					if panicked != test.want {
+						t.Errorf("Calculate(%v) had panicked = `%v` but wanted panic: %v", test.in, panicked, test.want)
+					}
+				case nil:
+					t.Errorf("Calculate(%v) = %v and didn't panic, but wanted panic: %v", test.in, got, test.want)
+				default:
+					t.Errorf("Calculate(%v) had unknown panic = `%v`, but wanted panic: %v", test.in, panicked, test.want)
 				}
 			}()
 			log.Printf("run %v", test.in)
