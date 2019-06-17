@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"runtime/debug"
 	"testing"
@@ -50,7 +51,7 @@ func TestCalculate(t *testing.T) {
 		//入力に負の小数
 		//-1をかける実装をした時にこの誤差が許容範囲を超えてしまう
 		//Calculate(1+-2.2) = -1.2000000000000002 but want 1.2
-		{"1+-2.2", 1.2},
+		{"1+-2.2", -1.2},
 
 		//連続計算
 		{"2+3+4", 9},
@@ -111,9 +112,6 @@ func TestCalculate(t *testing.T) {
 
 		//(式)*(式)
 		{"(1+2)*(3+4)", 21},
-
-		//0で割った時に正しいエラー文が出るかどうかのチェックを追加したい
-
 	} {
 		defer func() {
 			if r := recover(); r != nil {
@@ -126,5 +124,25 @@ func TestCalculate(t *testing.T) {
 		if math.Abs(got-test.want) > tolerance {
 			t.Errorf("Calculate(%v) = %v but want %v", test.in, got, test.want)
 		}
+	}
+}
+
+func TestCalculatePanics(t *testing.T) {
+	for _, test := range []struct {
+		in   string
+		want string
+	}{
+		//0で割った時に正しいエラー文が出るかどうかのチェックを追加したい
+		{"0/0", "can't divide by 0"},
+	} {
+		panicked := ""
+		defer func() {
+			panicked = fmt.Sprintf("%v", recover())
+			if panicked != test.want {
+				t.Errorf("Calculate(%v) panicked with `%v` but wanted panic: %v", test.in, panicked, test.want)
+			}
+		}()
+		got := Calculate(test.in)
+		t.Errorf("Calculate(%v) = %v without panicking, but wanted panic: %v", test.in, got, test.want)
 	}
 }
