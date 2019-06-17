@@ -148,6 +148,9 @@ func TestCalculatePanics(t *testing.T) {
 			var got float64
 			defer func() {
 				i := recover() // recover returns an interface{}
+
+				// This kind of switch is called a "type switch"
+				// https://go-tour-jp.appspot.com/methods/16
 				switch panicked := i.(type) {
 				case string: // here `panicked` is now typed as a string
 					if panicked != test.want {
