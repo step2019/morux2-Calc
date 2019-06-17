@@ -137,7 +137,7 @@ func TestCalculatePanics(t *testing.T) {
 	} {
 		panicked := ""
 		defer func() {
-			panicked = fmt.Sprintf("%v", recover())
+			panicked = fmt.Sprint(recover())
 			if panicked != test.want {
 				t.Errorf("Calculate(%v) panicked with `%v` but wanted panic: %v", test.in, panicked, test.want)
 			}
