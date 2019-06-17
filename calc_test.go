@@ -135,9 +135,8 @@ func TestCalculatePanics(t *testing.T) {
 		//0で割った時に正しいエラー文が出るかどうかのチェックを追加したい
 		{"0/0", "can't divide by 0"},
 	} {
-		panicked := ""
 		defer func() {
-			panicked = fmt.Sprint(recover())
+			panicked := fmt.Sprint(recover())
 			if panicked != test.want {
 				t.Errorf("Calculate(%v) panicked with `%v` but wanted panic: %v", test.in, panicked, test.want)
 			}
